@@ -12,7 +12,7 @@ Be sure to log out of SSH and log back in for the changes to be reflected.
 
 ## Enabling short tags in PHP
 
-This lets you do `<?` instead of `<?php. 
+This lets you do `<?` instead of `<?php`. 
 
 	vim /opt/bitnami/php/etc/php.ini
 	:/short_open_tag 
@@ -40,9 +40,7 @@ This may not be incredibly secure but I love it an use it all the time.
 ## Edit the HTTP.conf file: 
 	/opt/bitnami/apache2/conf/httpd.conf
 
-It turns out that this is nothing more than a declaration of where the actual virtual host configuration files are. The real one for WordPress is here:
-
-	/opt/bitnami/apps/wordpress/conf/wordpress.conf
+It turns out that this is nothing more than a declaration of where the actual virtual host configuration files are. Scroll to the bottom of this file and you'll find where the real stuff is.
 
 ## Default public directory for primary domain/IP:
 
@@ -120,6 +118,30 @@ This worked like a charm:
 
 ## Configuring WordPress to be the primary directory
 
-Scrolling halfway down, this is the bomb. Follow it extremely closely. 
+Actually, what I ended up doing was just move all of the WP files up to their parent directory. This was the quick and dirty way to get the first domain up and running on this server, but now it's coming back to haunt my now that I'm trying to create a secondary virtual host.
 
-http://wiki.bitnami.org/Applications/BitNami_Wordpress_Stack#How_to_change_the_WordPress_domain_name.3f
+## Creating a Virtual Host
+
+Confusingly, [this article](http://wiki.bitnami.org/Components/Apache#How_to_create_a_Virtual_Host.3f) makes it look like you should be able to uncomment the last line in the main httpd.conf file, have it "require" the `/opt/bitnami/apache2/conf/extra/httpd-vhosts.conf` file, and create a Virtual Host pointing to this directory:
+
+	/opt/bitnami/apps/yourapp/htdocs
+
+Unfortunately, doing this and restarting apache results in a 403 error (despite changing owners and permissions to being as wide as possible). Why? No clue. 
+
+Solution? Follow [this tutorial](http://answers.bitnami.org/questions/580/multiple-domains-on-bitnami-wordpress-for-amazon-ec2/2295) and create a virtual host inside  `/opt/bitnami/apache2/conf/extra/httpd-vhosts.conf` that looks something like this:
+
+
+	<VirtualHost *:80>
+		ServerName yourdomain.com
+		ServerAlias yourdomain.com
+		DocumentRoot "/opt/bitnami/apache2/htdocs/yourdomain.com"
+		ErrorLog "logs/error_log"
+		CustomLog "logs/access_log" common
+	</VirtualHost>
+
+	<Directory "/opt/bitnami/apache2/htdocs/yourdomain.com">
+		Allow from all
+		Order Deny, Allow
+	</Directory>
+
+Restart apache and your new virtual host *should* be up and running. 
